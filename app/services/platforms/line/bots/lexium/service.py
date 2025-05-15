@@ -1,77 +1,51 @@
-import random
+# app/services/platforms/line/bots/lexium/service.py
+from app.core.firebase import get_db
+from google.cloud import firestore
 from linebot import LineBotApi
-from linebot.models import (
-    TextSendMessage,
-    TemplateSendMessage,
-    ConfirmTemplate,
-    MessageAction
-)
+from linebot.models import TextSendMessage
+from app.services.platforms.line.bots.lexium import handlers
+from app.core.config import settings
 import os
 
 line_bot_api = LineBotApi(os.getenv("CHANNEL_ACCESS_TOKEN"))
 
-SAMPLE_WORDS = [
-    {"id": 1, "word": "achieve", "collocation": "achieve a goal", "translation": "目標を達成する"},
-    {"id": 2, "word": "maintain", "collocation": "maintain balance", "translation": "バランスを維持する"},
-    {"id": 3, "word": "create", "collocation": "create opportunities", "translation": "機会を作り出す"},
-]
-
-def get_question_by_id(word_id):
-    for word in SAMPLE_WORDS:
-        if word["id"] == word_id:
-            return word
-    return None
-
 async def handle_lexium_message(event):
-    message_text = event["message"]["text"]
+    message_text = event["message"]["text"].strip().lower()
     reply_token = event["replyToken"]
-    user_id = event["source"]["userId"]
+    line_user_id = event["source"]["userId"]  # LINEのユーザーID
 
-    # 最初の出題（イベントがpostbackじゃなく、普通のメッセージだったら）
-    if not ("ok|" in message_text or "ng|" in message_text):
-        await send_question(reply_token)
+    db = get_db()
+
+    # Firestoreでline_user_idに紐づくuser_idを取得
+    users_ref = db.collection("users")
+    query = users_ref.where("line_user_id", "==", line_user_id).limit(1)
+    docs = list(query.stream())
+
+    if not docs:
+        line_bot_api.reply_message(
+            reply_token,
+            TextSendMessage(text=f"まだ初回のレベルチェックが完了していません。以下のリンクからレベルチェックを行ってください。\n\nhttps://miniapp.line.me/{settings.level_check_liff_id}")
+        )
         return
 
-    # ユーザーが〇✕ボタンを押したとき
-    action, word_id_str = message_text.split("|")
-    word_id = int(word_id_str)
-    word = get_question_by_id(word_id)
+    user_doc = docs[0]
+    user_id = user_doc.id  # ドキュメントIDとして使うuser_id
 
-    messages = []
-
-    if action == "ng":
-        # 間違えたときだけ、和訳を先にリプライ
-        messages.append(TextSendMessage(text=f"【和訳】{word['translation']}"))
-
-    # 次の問題を送る
-    question = random.choice(SAMPLE_WORDS)
-    messages.append(
-        TemplateSendMessage(
-            alt_text="次の問題に答えてください",
-            template=ConfirmTemplate(
-                text=f"{question['collocation']}",
-                actions=[
-                    MessageAction(label="〇", text=f"ok|{question['id']}"),
-                    MessageAction(label="✕", text=f"ng|{question['id']}")
-                ]
-            )
+    # コマンドルーティング
+    if message_text in ["quiz", "start"]:
+        await handlers.handle_quiz_command(reply_token, line_bot_api, user_id)
+    elif message_text in ["movie", "learn"]:
+        await handlers.handle_movie_command(user_id, reply_token, line_bot_api)
+    elif message_text in ["past", "history", "watched"]:
+        await handlers.handle_past_movies_command(user_id, reply_token, line_bot_api)
+    elif message_text in ["progress", "status"]:
+        await handlers.handle_progress_command(user_id, reply_token, line_bot_api)
+    elif message_text in ["help", "?"]:
+        await handlers.handle_help_command(reply_token, line_bot_api)
+    elif message_text.startswith(("ok|", "ng|")) and "|" in message_text:
+        await handlers.handle_quiz_action(message_text, reply_token, line_bot_api, user_id)
+    else:
+        line_bot_api.reply_message(
+            reply_token,
+            TextSendMessage(text="コマンドが見つかりませんでした。`help` と送って使い方を確認してください。")
         )
-    )
-
-    line_bot_api.reply_message(reply_token, messages)
-
-async def send_question(reply_token):
-    question = random.choice(SAMPLE_WORDS)
-    line_bot_api.reply_message(
-        reply_token,
-        TemplateSendMessage(
-            alt_text="問題に答えてください",
-            template=ConfirmTemplate(
-                text=f"【問題】{question['collocation']}",
-                actions=[
-                    MessageAction(label="〇", text=f"ok|{question['id']}"),
-                    MessageAction(label="✕", text=f"ng|{question['id']}")
-                ]
-            )
-        )
-    )

@@ -1,18 +1,21 @@
 # ベースイメージ
 FROM python:3.11-slim
 
-# 作業ディレクトリ作成
+# 作業ディレクトリ
 WORKDIR /app
 
-# 必要なファイルをコピー
+# PYTHONPATH を追加
+ENV PYTHONPATH="${PYTHONPATH}:/app"
+
+# 必要パッケージをインストール
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# アプリケーションコピー
+# アプリケーション一式をコピー（static/ も含む）
 COPY ./app ./app
 
-# 環境変数（Cloud Run用にポートは8080）
+# Cloud Run/本番用ポート指定
 ENV PORT=8080
 
-# uvicorn起動
+# 起動コマンド（FastAPI via Uvicorn）
 CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8080"]

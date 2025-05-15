@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ja">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1.0" />
+    <title>語彙レベル診断 – Lexium</title>
+    <script src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
+    <meta http-equiv="Cache-Control" content="no-store" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            max-width: 600px;
+            margin: 40px auto;
+            padding: 0 1rem;
+        }
+
+        h1 {
+            text-align: center;
+            font-size: 1.4rem;
+            margin-bottom: 1rem;
+        }
+
+        #question-text {
+            font-size: 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .choice {
+            display: block;
+            width: 100%;
+            padding: .75rem;
+            margin: .4rem 0;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background: #fafafa;
+            cursor: pointer;
+        }
+
+        .choice:hover {
+            background: #f0f0f0;
+        }
+
+        #btn-unknown,
+        #btn-back {
+            margin-top: .8rem;
+            background: #eee;
+            border: none;
+            padding: .6rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+        }
+
+        #btn-back {
+            margin-right: 1rem;
+        }
+
+        progress {
+            width: 100%;
+            height: 8px;
+        }
+    </style>
+</head>
+
+<body>
+    <h1>語彙レベル診断</h1>
+
+    <div id="question-text">読み込み中...</div>
+    <div id="choices"></div>
+
+    <div style="margin-top:1rem;">
+        <button id="btn-back" style="display:none;">戻る</button>
+        <button id="btn-unknown">分からない</button>
+    </div>
+
+    <progress id="progress" value="0" max="100"></progress>
+    <div id="error-message" style="color:red; margin-top:1rem;"></div>
+
+    <script type="module">
+        // ====== 定数 ======
+        const QUESTIONS_PER_LEVEL = 4;                     // 1レベルあたりの問題数
+        const LIFF_ID = "2007373625-DPkWENnY";
+        const TITLES = [
+            "ルーキー",
+            "アイアン",
+            "ブロンズ",
+            "シルバー",
+            "ゴールド",
+            "プラチナ",
+            "ダイヤモンド",
+            "マスター"
+        ];
+
+
+        // ====== 問題データ ======
+        const WORDS = [
+            // Level 1
+            { id: 0, word: "require", level: 1, choices: ["必要とする", "避ける", "測定する", "許可する"], correct: 0 },
+            { id: 1, word: "body", level: 1, choices: ["体", "計画", "庭", "国"], correct: 0 },
+            { id: 2, word: "further", level: 1, choices: ["さらに", "ほとんど", "突然", "代わりに"], correct: 0 },
+            { id: 3, word: "policy", level: 1, choices: ["方針", "速度", "位置", "客"], correct: 0 },
+
+            // Level 2
+            { id: 4, word: "access", level: 2, choices: ["利用", "損失", "契約", "危険"], correct: 0 },
+            { id: 5, word: "husband", level: 2, choices: ["夫", "叔父", "候補", "隣人"], correct: 0 },
+            { id: 6, word: "red", level: 2, choices: ["赤い", "柔らかい", "高い", "軽い"], correct: 0 },
+            { id: 7, word: "pull", level: 2, choices: ["引く", "置く", "泳ぐ", "集める"], correct: 0 },
+
+            // Level 3
+            { id: 8, word: "cry", level: 3, choices: ["泣く", "掃く", "選ぶ", "訪れる"], correct: 0 },
+            { id: 9, word: "ball", level: 3, choices: ["球", "塔", "雲", "川"], correct: 0 },
+            { id: 10, word: "driver", level: 3, choices: ["運転手", "作家", "患者", "歌手"], correct: 0 },
+            { id: 11, word: "scale", level: 3, choices: ["規模", "記号", "影響", "義務"], correct: 0 },
+
+            // Level 4
+            { id: 12, word: "row", level: 4, choices: ["列", "薬", "氷", "指輪"], correct: 0 },
+            { id: 13, word: "soft", level: 4, choices: ["柔らかい", "渋い", "狭い", "危険な"], correct: 0 },
+            { id: 14, word: "lovely", level: 4, choices: ["素敵な", "貧しい", "厳しい", "鈍い"], correct: 0 },
+            { id: 15, word: "tea", level: 4, choices: ["お茶", "砂糖", "鉄", "油"], correct: 0 },
+
+            // Level 5
+            { id: 16, word: "negotiate", level: 5, choices: ["交渉する", "探検する", "装飾する", "延期する"], correct: 0 },
+            { id: 17, word: "achievement", level: 5, choices: ["業績", "武器", "症状", "景色"], correct: 0 },
+            { id: 18, word: "thick", level: 5, choices: ["厚い", "弱い", "薄い", "臭い"], correct: 0 },
+            { id: 19, word: "storm", level: 5, choices: ["嵐", "種", "空腹", "鏡"], correct: 0 },
+
+            // Level 6
+            { id: 20, word: "correspond", level: 6, choices: ["一致する", "反抗する", "投票する", "変換する"], correct: 0 },
+            { id: 21, word: "stroke", level: 6, choices: ["脳卒中", "温度", "誕生日", "予算"], correct: 0 },
+            { id: 22, word: "dare", level: 6, choices: ["あえて～する", "喜んで～する", "逃げる", "疑う"], correct: 0 },
+            { id: 23, word: "barrier", level: 6, choices: ["障壁", "証拠", "課税", "劇場"], correct: 0 },
+
+            // Level 7
+            { id: 24, word: "thirst", level: 7, choices: ["渇き", "頂点", "習慣", "署名"], correct: 0 },
+            { id: 25, word: "blog", level: 7, choices: ["ブログ", "寝袋", "議会", "景観"], correct: 0 },
+            { id: 26, word: "found", level: 7, choices: ["設立する", "折りたたむ", "装う", "注ぐ"], correct: 0 },
+            { id: 27, word: "ashamed", level: 7, choices: ["恥じて", "肯定的で", "並外れて", "疑わしく"], correct: 0 }
+        ];
+
+        // ====== グローバル状態 ======
+        const state = { cur: 0, answers: [] };
+        let lineUserId = null;
+
+        // ====== DOM 参照 ======
+        const $q = document.querySelector('#question-text');
+        const $box = document.querySelector('#choices');
+        const $prog = document.querySelector('#progress');
+        const $unk = document.querySelector('#btn-unknown');
+        const $back = document.querySelector('#btn-back');
+        const $err = document.getElementById("error-message");
+
+        // ====== LIFF 初期化 ======
+        async function initLiff() {
+            try {
+                await liff.init({ liffId: LIFF_ID });
+
+                lineUserId = liff.isInClient()
+                    ? liff.getContext()?.userId
+                    : (await (await liff.login(), liff.getProfile()))?.userId;
+
+                if (!lineUserId) {
+                    $err.textContent = "ユーザー情報が取得できません。LINEアプリで開いてください。";
+                    return;
+                }
+                await checkUserStatusAndStart(lineUserId);
+            } catch (err) {
+                console.error("LIFF init error:", err);
+                $err.textContent = "LIFF初期化に失敗しました：" + err.message;
+            }
+        }
+
+        // ====== 診断済みユーザー確認 ======
+        async function checkUserStatusAndStart(uid) {
+            try {
+                const res = await fetch(`/api/v1/vocab-test/user-status?line_user_id=${encodeURIComponent(uid)}`);
+                const data = await res.json();
+
+                // 値が存在する（0〜7）なら診断済み
+                if (data.mastered_level !== undefined && data.mastered_level !== null) {
+                    const displayLevel = data.mastered_level + 1;
+                    $q.textContent = `あなたはすでに【レベル${displayLevel} – ${TITLES[displayLevel - 1]}】で診断済みです。再テストはできません。`;
+                    $box.innerHTML = '';
+                    $unk.style.display = 'none';
+                    $back.style.display = 'none';
+                    $prog.style.display = 'none';
+                } else {
+                    show(0); // 未診断なので開始
+                }
+            } catch (e) {
+                console.error("ユーザーステータス確認エラー:", e);
+                $q.textContent = 'エラーが発生しました。時間をおいて再試行してください。';
+            }
+        }
+
+        // ====== 出題表示 ======
+        function show(idx) {
+            const q = WORDS[idx];
+            $q.textContent = `問題 ${idx + 1}/${WORDS.length}: “${q.word}” の意味は？`;
+
+            // 選択肢をシャッフル
+            const choicesWithIndex = q.choices.map((choice, i) => ({ text: choice, originalIndex: i }));
+            for (let i = choicesWithIndex.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [choicesWithIndex[i], choicesWithIndex[j]] = [choicesWithIndex[j], choicesWithIndex[i]];
+            }
+            const shuffledCorrectIndex = choicesWithIndex.findIndex(c => c.originalIndex === q.correct);
+
+            state.currentChoices = choicesWithIndex;
+            state.correctIndex = shuffledCorrectIndex;
+
+            $box.innerHTML = '';
+            choicesWithIndex.forEach((ch, i) => {
+                const btn = document.createElement('button');
+                btn.className = 'choice';
+                btn.textContent = ch.text;
+                btn.onclick = () => answer(i, false);
+                $box.appendChild(btn);
+            });
+
+            $prog.value = (idx / WORDS.length) * 100;
+            $unk.style.display = 'inline-block';
+            $back.style.display = idx > 0 ? 'inline-block' : 'none';
+        }
+
+        // ====== 回答処理 ======
+        function answer(picked, skip) {
+            const q = WORDS[state.cur];
+            state.answers[state.cur] = {
+                id: q.id,
+                level: q.level,
+                picked: skip ? null : picked,
+                correct: !skip && picked === state.correctIndex,
+            };
+            state.cur++;
+            state.cur < WORDS.length ? show(state.cur) : showResult();
+        }
+
+        // ====== 戻るボタン ======
+        function goBack() {
+            if (state.cur > 0) {
+                state.cur--;
+                show(state.cur);
+            }
+        }
+
+        // ====== 結果判定 & 送信 ======
+        async function showResult() {
+            $q.textContent = '採点中...';
+            $box.innerHTML = '';
+            $unk.style.display = 'none';
+            $back.style.display = 'none';
+            $prog.value = 100;
+
+            // レベルごとに正誤をまとめる
+            const levelGroups = {};
+            state.answers.forEach(a => {
+                (levelGroups[a.level] ||= []).push(a.correct);
+            });
+
+            let masteredLevel = 0;
+            let hasLowerLevelMistake = false;  // 下位レベルでミスが出たかどうか
+
+            for (let lvl = 1; lvl <= 7; lvl++) {
+                const arr = levelGroups[lvl] || [];
+                const allCorrect = (arr.length === QUESTIONS_PER_LEVEL) && arr.every(x => x);
+
+                if (lvl <= 4) {
+                    // Lv1–4: 全問正解なら無条件で更新
+                    if (allCorrect) masteredLevel = lvl;
+                } else {
+                    // Lv5–7: それ以前にミスが無く、かつ全問正解なら更新
+                    if (!hasLowerLevelMistake && allCorrect) {
+                        masteredLevel = lvl;
+                    }
+                }
+
+                // ミスがあったらフラグを立てる（Lv5 以降は以降の判定にも影響）
+                if (!allCorrect) {
+                    hasLowerLevelMistake = true;
+                    // Lv5 以降でミスしたら以降は合格不可なのでループ終了
+                    if (lvl >= 5) break;
+                }
+            }
+            const displayLevel = masteredLevel + 1;
+
+            try {
+                const res = await fetch('/api/v1/vocab-test/submit', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ line_user_id: lineUserId, mastered_level: masteredLevel }),
+                });
+                if (!res.ok) throw new Error(`送信失敗: ${res.status} / ${await res.text()}`);
+
+                $q.textContent = `診断完了！あなたの語彙レベルは【レベル${displayLevel} – ${TITLES[displayLevel - 1]}】です。`;
+
+                // 間違いフィードバック
+                const wrongAnswers = state.answers.filter(ans => !ans.correct);
+                if (wrongAnswers.length > 0) {
+                    const feedback = document.createElement("div");
+                    feedback.innerHTML = "<h3>間違えた単語の正解:</h3>";
+                    wrongAnswers.forEach(ans => {
+                        const word = WORDS.find(w => w.id === ans.id);
+                        if (word) {
+                            const p = document.createElement("p");
+                            p.textContent = `「${word.word}」 → 正解: 「${word.choices[word.correct]}」`;
+                            feedback.appendChild(p);
+                        }
+                    });
+                    $box.appendChild(feedback);
+                }
+
+                // Bot に movie コマンド送信
+                if (window.liff && liff.isInClient()) {
+                    await liff.sendMessages([{ type: 'text', text: 'movie' }]);
+                }
+            } catch (e) {
+                console.error(e);
+                $q.textContent = '送信に失敗しました。時間をおいて再試行してください。';
+            }
+        }
+
+        // ====== イベント登録 ======
+        $unk.onclick = () => answer(null, true);
+        $back.onclick = () => goBack();
+
+        // ====== 起動 ======
+        initLiff();
+    </script>
+</body>
+
+</html>

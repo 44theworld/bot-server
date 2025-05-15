@@ -8,3 +8,5 @@ google-api-python-client
 google-auth
 google-auth-httplib2
 google-auth-oauthlib
+firebase_admin
+google-cloud-firestore

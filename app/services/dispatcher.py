@@ -9,7 +9,6 @@ async def dispatch_message(platform: str, body: dict, background_tasks: Backgrou
     """
     受け取ったリクエストをプラットフォームごとに適切なhandlerに振り分ける
     """
-    print(f"Dispatching message for platform: {platform}")
     if platform == "line":
         await handle_line_message(body)
     elif platform == "discord":

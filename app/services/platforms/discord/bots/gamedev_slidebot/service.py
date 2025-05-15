@@ -20,8 +20,6 @@ def handle_gamedev_slide_command(
     options = data.get("options", [])
     memo_text = next((opt["value"] for opt in options if opt["name"] == "memo"), "")
 
-    print("📝 メモ:", memo_text)
-
     # バックグラウンドで実行
     background_tasks.add_task(process_later, memo_text, interaction_id, interaction_token, application_id)
 
