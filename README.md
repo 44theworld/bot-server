@@ -52,23 +52,6 @@
 - `FASTAPI_URL`: FastAPIのベースURL
 - `DISCORD_PUBLIC_KEY`: Discordの公開鍵
 
-## セットアップ
-
-### 1. 必要な依存パッケージをインストール
-```bash
-pip install -r requirements.txt
-```
-
-### 2. Dockerを使用して起動
-```bash
-docker-compose up --build
-```
-
-### 3. ローカルで起動
-以下のコマンドでFastAPIサーバーを起動します：
-```bash
-uvicorn app.main:app --reload
-```
 
 ## APIエンドポイント
 
