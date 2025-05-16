@@ -41,18 +41,6 @@
 ### Discordボット
 - **スライド生成**: ChatGPTを使用してメモからGoogleスライドを生成。
 
-## 環境変数
-
-`.env`ファイルで以下の環境変数を設定してください：
-
-- `OPENROUTER_API_KEY`: ChatGPT APIキー
-- `SLIDE_CREDENTIALS`: Google Slides APIの認証情報（JSON文字列）
-- `FIREBASE_ACCOUNT_FILE`: Firebase認証キーのファイルパス
-- `LEVEL_CHECK_LIFF_ID`: LINE LIFFアプリID
-- `FASTAPI_URL`: FastAPIのベースURL
-- `DISCORD_PUBLIC_KEY`: Discordの公開鍵
-
-
 ## APIエンドポイント
 
 ### Webhook
@@ -79,7 +67,3 @@
 - **その他**:
   - LINE Messaging API
   - Discord Interactions API
-
-## ライセンス
-
-このプロジェクトはMITライセンスの下で公開されています。
